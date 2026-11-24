@@ -14,7 +14,7 @@
     { token: 'Golkonda', name: 'Golkonda', lvl: 79, loc: 'ToI 11' },
   ];
   const DEFAULTS = { 'bw.sound': '', 'bw.openH': '18', 'bw.closeH': '30', 'bw.notifyBefore': '10',
-    'bw.notifyOpen': '1', 'bw.interval': '60', 'bw.repeat': '2', 'bw.enabled': '1' };
+    'bw.notifyOpen': '1', 'bw.interval': '30', 'bw.repeat': '2', 'bw.enabled': '1' };
 
   // ---------- Capacitor ----------
   const Cap = window.Capacitor;
@@ -258,7 +258,7 @@
       'bw.openH': openH, 'bw.closeH': closeH,
       'bw.notifyOpen': $('sNotifyOpen').checked ? '1' : '0',
       'bw.notifyBefore': num($('sBefore').value, '10'),
-      'bw.interval': num($('sInterval').value, '60', 30),
+      'bw.interval': num($('sInterval').value, '30', 10),
       'bw.repeat': String(Math.min(10, Math.max(1, Number($('sRepeat').value) || 1))),
     };
     for (const k of Object.keys(upd)) { cfg[k] = upd[k]; await setPref(k, upd[k]); }

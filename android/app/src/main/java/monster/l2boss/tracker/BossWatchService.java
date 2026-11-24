@@ -112,7 +112,7 @@ public class BossWatchService extends Service {
 
     private void schedule() {
         if (task != null) task.cancel(false);
-        long sec = Math.max(30, parseLong(cfg(this).getString("bw.interval", "60"), 60));
+        long sec = Math.max(10, parseLong(cfg(this).getString("bw.interval", "30"), 30));
         if (wakeLock != null && !wakeLock.isHeld()) wakeLock.acquire();
         task = exec.scheduleWithFixedDelay(this::poll, 0, sec, TimeUnit.SECONDS);
         running = true;
