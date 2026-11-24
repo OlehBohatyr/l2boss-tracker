@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0f0d0a">
+<title>L2 Boss Tracker</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <div class="title">Саб РБ · Asterios x5</div>
+    <div class="clock" id="clock">—</div>
+  </div>
+  <button class="icon-btn" id="btnSettings" aria-label="Настройки">⚙</button>
+</header>
+
+<section class="watch" id="watchBar">
+  <div class="watch-info">
+    <div class="watch-title" id="watchTitle">Фоновое слежение</div>
+    <div class="watch-sub" id="watchSub">—</div>
+  </div>
+  <label class="switch big"><input type="checkbox" id="watchToggle"><span></span></label>
+</section>
+
+<div id="warnings"></div>
+
+<main id="list"></main>
+
+<section class="history-box">
+  <h3>Замеченные убийства</h3>
+  <div id="history" class="history"></div>
+</section>
+
+<p class="source">Данные: l2lb.monster (Asterios x5). Время на экране — по часам телефона.</p>
+
+<div class="backdrop" id="backdrop"></div>
+
+<section class="sheet tall" id="sheetSettings">
+  <h2>Настройки</h2>
+  <div class="row">
+    <label>Окно открывается, ч после смерти <input id="sOpenH" type="number" inputmode="decimal" step="0.5" min="0"></label>
+    <label>Окно закрывается, ч после смерти <input id="sCloseH" type="number" inputmode="decimal" step="0.5" min="0"></label>
+  </div>
+  <p class="hint">На Asterios x5 у саб РБ: 18–30 ч (24 ч ± 6).</p>
+  <div class="checks col">
+    <label class="chk"><input id="sNotifyOpen" type="checkbox"> Уведомлять об окне респа</label>
+  </div>
+  <div class="row">
+    <label>Предупредить до окна, мин <input id="sBefore" type="number" inputmode="numeric" min="0" step="1"></label>
+    <label>Проверять каждые, сек <input id="sInterval" type="number" inputmode="numeric" min="30" step="10"></label>
+  </div>
+  <label>Сколько раз проиграть мелодию <input id="sRepeat" type="number" inputmode="numeric" min="1" max="10" step="1"></label>
+  <div class="actions wrap">
+    <button class="ghost" id="btnTestSound">▶ Проверить звук</button>
+    <button class="ghost" id="btnNotifSettings">Уведомления</button>
+    <button class="ghost" id="btnBattery">Батарея</button>
+  </div>
+  <p class="hint">Мелодия играет через громкость <b>будильника</b>. Чтобы слежение не засыпало, разреши приложению работать без ограничений батареи.</p>
+  <p class="hint" id="diag"></p>
+  <div class="actions"><button class="ghost" id="btnClearHistory">Очистить историю</button><button class="primary" id="btnSettingsSave">Готово</button></div>
+</section>
+
+<div class="toast" id="toast"><span id="toastText"></span></div>
+
+<script src="app.js"></script>
+</body>
+</html>

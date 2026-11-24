@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">L2 Boss Tracker</string>
+    <string name="title_activity_main">L2 Boss Tracker</string>
+    <string name="package_name">monster.l2boss.tracker</string>
+    <string name="custom_url_scheme">monster.l2boss.tracker</string>
+</resources>

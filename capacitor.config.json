@@ -1,0 +1,11 @@
+{
+  "appId": "monster.l2boss.tracker",
+  "appName": "L2 Boss Tracker",
+  "webDir": "www",
+  "android": {
+    "adjustMarginsForEdgeToEdge": "force"
+  },
+  "plugins": {
+    "CapacitorHttp": { "enabled": true }
+  }
+}

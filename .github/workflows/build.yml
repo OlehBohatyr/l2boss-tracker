@@ -1,0 +1,74 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install & sync Capacitor
+        run: |
+          npm ci
+          npx cap sync android
+
+      - name: Check boss API (info only)
+        continue-on-error: true
+        run: |
+          curl -s -m 20 -A "Mozilla/5.0 (Linux; Android 14) L2BossTracker/1.0" \
+            -o api.json -w "HTTP %{http_code}\n" https://s.l2lb.monster/api/v1/asterios/bosses > api-status.txt 2>&1 || true
+          head -c 600 api.json >> api-status.txt || true
+          cat api-status.txt
+
+      - name: Build APK
+        shell: bash
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease -PappVersionCode=${{ github.run_number }} --no-daemon --stacktrace 2>&1 | tee ../build.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Collect APK
+        run: cp android/app/build/outputs/apk/release/app-release.apk l2boss-tracker.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: l2boss-tracker-${{ github.run_number }}
+          path: l2boss-tracker.apk
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v1.0.${{ github.run_number }}" l2boss-tracker.apk \
+            --target "${{ github.sha }}" --latest \
+            --title "L2 Boss Tracker 1.0.${{ github.run_number }}" \
+            --notes "Скачай l2boss-tracker.apk и установи на телефон. Обновление ставится поверх старой версии."
+
+      - name: Save logs (for debugging)
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p /tmp/logs
+          cp build.log api-status.txt /tmp/logs/ 2>/dev/null || true
+          echo "run ${{ github.run_number }}: ${{ job.status }}" > /tmp/logs/status.txt
+          cd /tmp/logs
+          git init -q && git checkout -q -b ci-logs && git add -A
+          git -c user.name=ci -c user.email=ci@localhost commit -qm "logs run ${{ github.run_number }}"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" ci-logs
