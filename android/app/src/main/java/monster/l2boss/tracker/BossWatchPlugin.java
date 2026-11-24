@@ -68,6 +68,22 @@ public class BossWatchPlugin extends Plugin {
         catch (Exception e) { call.reject(e.getMessage()); }
     }
 
+    /** Загрузить свежие данные прямо сейчас (для экрана), без уведомлений. */
+    @PluginMethod
+    public void fetchData(PluginCall call) {
+        new Thread(() -> {
+            try {
+                String[] r = BossWatchService.fetchBosses();
+                JSObject o = new JSObject();
+                o.put("json", r[0]);
+                o.put("source", r[1]);
+                call.resolve(o);
+            } catch (Exception e) {
+                call.reject(e.getMessage());
+            }
+        }).start();
+    }
+
     @PluginMethod
     public void status(PluginCall call) {
         Context ctx = getContext();
@@ -78,6 +94,7 @@ public class BossWatchPlugin extends Plugin {
         r.put("lastOk", st.getLong("lastOk", 0));
         r.put("lastFail", st.getLong("lastFail", 0));
         r.put("lastError", st.getString("lastError", null));
+        r.put("source", st.getString("source", null));
         r.put("notifications", NotificationManagerCompat.from(ctx).areNotificationsEnabled());
         r.put("batteryOk", isIgnoringBattery(ctx));
         call.resolve(r);

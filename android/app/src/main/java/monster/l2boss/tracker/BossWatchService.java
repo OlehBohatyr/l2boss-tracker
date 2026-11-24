@@ -146,7 +146,8 @@ public class BossWatchService extends Service {
         SharedPreferences cfg = cfg(this);
         long now = System.currentTimeMillis();
         try {
-            String body = httpGet(API);
+            String[] res = fetchBosses();
+            String body = res[0];
             JSONArray arr = new JSONArray(body);
             Set<String> sound = splitSet(cfg.getString("bw.sound", ""));
             boolean firstRun = !st.contains("lastOk");
@@ -166,7 +167,7 @@ public class BossWatchService extends Service {
                 }
                 ed.putString("kill_" + token, kill);
             }
-            ed.putString("lastJson", body).putLong("lastOk", now).remove("lastError").apply();
+            ed.putString("lastJson", body).putString("source", res[1]).putLong("lastOk", now).remove("lastError").apply();
             if (play) main.post(this::playSound);
             checkWindows(arr, cfg, st, now);
             updateForeground(arr, cfg, now);
@@ -177,13 +178,80 @@ public class BossWatchService extends Service {
         }
     }
 
-    private static String httpGet(String url) throws Exception {
+    public static final String ASTERIOS = "https://asterios.tm/index.php?cmd=rss&serv=0&filter=keyboss";
+    public static final String[] TOKENS = {"Cabrio", "Hallate", "Kernon", "Golkonda"};
+
+    /** Возвращает {json, источник}. Сначала официальный сайт, потом l2lb. */
+    static String[] fetchBosses() throws Exception {
+        Exception first = null;
+        try {
+            String html = httpGet(ASTERIOS, "https://asterios.tm/");
+            String json = parseAsterios(html);
+            if (json != null) return new String[]{json, "asterios.tm"};
+            first = new Exception("asterios.tm: не нашёл боссов на странице");
+        } catch (Exception e) { first = e; }
+        try {
+            String json = httpGet(API, "https://l2lb.monster/respawn-asterios-subclass-rb-x5/");
+            new JSONArray(json); // проверка формата
+            return new String[]{json, "l2lb.monster"};
+        } catch (Exception e) {
+            throw new Exception("asterios.tm: " + first.getMessage() + "; l2lb: " + e.getMessage());
+        }
+    }
+
+    private static final java.util.regex.Pattern ENTRY = java.util.regex.Pattern.compile(
+            "(\\d{4}-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d):\\s*Убит босс ([^<]+?)</a>.*?<td>([^<]*?)</td>",
+            java.util.regex.Pattern.DOTALL);
+    private static final java.util.regex.Pattern KILLER = java.util.regex.Pattern.compile(
+            "нанес (.+?)(?: из клана (.+?))?\\.?\\s*$");
+
+    /** Разбирает ленту «Ключевые боссы» с asterios.tm: берёт последнее убийство каждого саб РБ. */
+    static String parseAsterios(String html) throws Exception {
+        java.util.regex.Matcher m = ENTRY.matcher(html);
+        JSONObject[] found = new JSONObject[TOKENS.length];
+        int entries = 0;
+        while (m.find()) {
+            entries++;
+            String time = m.group(1), boss = unescape(m.group(2)).trim(), desc = unescape(m.group(3)).trim();
+            for (int i = 0; i < TOKENS.length; i++) {
+                if (found[i] != null || !boss.contains(TOKENS[i])) continue;
+                JSONObject o = new JSONObject();
+                o.put("boss_token", TOKENS[i]);
+                o.put("name", TOKENS[i]);
+                o.put("full_name", boss);
+                o.put("last_kill_at", time);
+                java.util.regex.Matcher k = KILLER.matcher(desc);
+                if (k.find()) {
+                    o.put("killer_name", k.group(1).trim());
+                    o.put("clan_name", k.group(2) != null ? k.group(2).trim() : JSONObject.NULL);
+                }
+                found[i] = o;
+            }
+        }
+        if (entries == 0) return null;
+        JSONArray arr = new JSONArray();
+        for (JSONObject o : found) if (o != null) arr.put(o);
+        return arr.length() > 0 ? arr.toString() : null;
+    }
+
+    static String unescape(String s) {
+        return s.replace("&amp;", "&").replace("&#039;", "'").replace("&#39;", "'").replace("&quot;", "\"")
+                .replace("&lt;", "<").replace("&gt;", ">").replace("&nbsp;", " ");
+    }
+
+    static String httpGet(String url, String referer) throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
         c.setConnectTimeout(15000);
         c.setReadTimeout(15000);
         c.setUseCaches(false);
-        c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android " + Build.VERSION.RELEASE + ") L2BossTracker/1.0");
-        c.setRequestProperty("Accept", "application/json");
+        c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android " + Build.VERSION.RELEASE + "; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Mobile Safari/537.36");
+        c.setRequestProperty("Accept", "application/json, text/html;q=0.9, */*;q=0.8");
+        c.setRequestProperty("Accept-Language", "ru,en;q=0.8");
+        if (referer != null) {
+            c.setRequestProperty("Referer", referer);
+            Uri r = Uri.parse(referer);
+            c.setRequestProperty("Origin", r.getScheme() + "://" + r.getHost());
+        }
         c.setRequestProperty("Cache-Control", "no-cache");
         try {
             int code = c.getResponseCode();

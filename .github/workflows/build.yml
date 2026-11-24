@@ -28,12 +28,15 @@ jobs:
           npm ci
           npx cap sync android
 
-      - name: Check boss API (info only)
+      - name: Check boss sources (info only)
         continue-on-error: true
         run: |
-          curl -s -m 20 -A "Mozilla/5.0 (Linux; Android 14) L2BossTracker/1.0" \
-            -o api.json -w "HTTP %{http_code}\n" https://s.l2lb.monster/api/v1/asterios/bosses > api-status.txt 2>&1 || true
-          head -c 600 api.json >> api-status.txt || true
+          UA="Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Mobile Safari/537.36"
+          {
+            echo "== asterios.tm"; curl -s -m 20 -A "$UA" -o ast.html -w "HTTP %{http_code}\n" "https://asterios.tm/index.php?cmd=rss&serv=0&filter=keyboss"; grep -o "[0-9-]* [0-9:]*: Убит босс [^<]*" ast.html | head -5
+            echo "== l2lb plain"; curl -s -m 20 -A "$UA" -w "\nHTTP %{http_code}\n" https://s.l2lb.monster/api/v1/asterios/bosses | head -c 300
+            echo "== l2lb with referer"; curl -s -m 20 -A "$UA" -H "Referer: https://l2lb.monster/respawn-asterios-subclass-rb-x5/" -H "Origin: https://l2lb.monster" -w "\nHTTP %{http_code}\n" https://s.l2lb.monster/api/v1/asterios/bosses | head -c 300
+          } > api-status.txt 2>&1 || true
           cat api-status.txt
 
       - name: Build APK

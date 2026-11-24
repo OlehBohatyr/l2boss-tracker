@@ -30,7 +30,7 @@
 
   let cfg = Object.assign({}, DEFAULTS);
   let data = {};          // token -> объект из API
-  let lastOk = 0, lastErr = null, svc = null;
+  let lastOk = 0, lastErr = null, svc = null, source = null;
   let history = [];
 
   // ---------- Настройки ----------
@@ -116,18 +116,23 @@
     if (BW) {
       try {
         svc = await BW.status();
-        if (svc.lastJson) applyJson(svc.lastJson, svc.lastOk);
+        if (svc.lastJson) { applyJson(svc.lastJson, svc.lastOk); source = source || svc.source; }
         lastErr = svc.lastError || null;
       } catch (e) {}
     }
-    // 2) свежий запрос (CapacitorHttp обходит CORS в приложении)
+    // 2) свежий запрос: в приложении — через службу (asterios.tm, запасной l2lb), в браузере — напрямую
     try {
-      const r = await fetch(API + '?t=' + Date.now(), { headers: { Accept: 'application/json' } });
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      applyJson(await r.json(), Date.now());
+      if (BW) {
+        const r = await BW.fetchData();
+        source = r.source; applyJson(r.json, Date.now());
+      } else {
+        const r = await fetch(API + '?t=' + Date.now(), { headers: { Accept: 'application/json' } });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        source = 'l2lb.monster'; applyJson(await r.json(), Date.now());
+      }
       lastErr = null;
     } catch (e) {
-      if (!lastOk) lastErr = 'Не удалось получить данные: ' + (e.message || e);
+      lastErr = 'Не удалось получить данные: ' + (e.message || e);
     }
     renderWatch();
   }
@@ -197,7 +202,7 @@
     if (!isNative) w.push('Это веб-версия: фоновое слежение и звук работают только в установленном приложении.');
     if (svc && svc.notifications === false) w.push('<b>Уведомления выключены.</b> <a data-go="notif">Включить</a>');
     if (svc && svc.batteryOk === false && on) w.push('Телефон может усыплять слежение. <a data-go="battery">Разрешить работу в фоне</a>');
-    if (lastErr && Date.now() - lastOk > 5 * M) w.push('⚠ ' + esc(lastErr));
+    if (lastErr && (!lastOk || Date.now() - lastOk > 5 * M)) w.push('⚠ ' + esc(lastErr));
     $('warnings').innerHTML = w.map((x) => `<div class="warn">${x}</div>`).join('');
     renderWatchSub(Date.now());
   }
@@ -205,6 +210,7 @@
     const on = cfg['bw.enabled'] === '1';
     let t = on ? (svc && svc.running === false && isNative ? 'Запускаю…' : 'Работает, даже если закрыть приложение') : 'Выключено: звука и уведомлений не будет';
     if (lastOk) t += ` · обновлено ${Math.max(0, Math.round((now - lastOk) / 1000)) < 60 ? Math.max(0, Math.round((now - lastOk) / 1000)) + ' с' : durShort(now - lastOk)} назад`;
+    if (source) t += ` · ${source}`;
     $('watchSub').textContent = t;
   }
 
