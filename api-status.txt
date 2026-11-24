@@ -1,0 +1,7 @@
+== asterios.tm
+HTTP 200
+== l2lb plain
+{"error":"Access denied"}
+HTTP 403
+== l2lb with referer
+[{"id":1,"server":"x5","boss_token":"Cabrio","name":"Cabrio","last_kill_at":"2026-11-24 06:05:34","killer_name":"bzm76","clan_name":null},{"id":2,"server":"x5","boss_token":"Hallate","name":"Hallate","last_kill_at":"2026-11-23 15:10:26","killer_name":"\u0425\u0430\u043d\u0411\u0430\u0442\u044b\u0439
